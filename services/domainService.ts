@@ -1,21 +1,44 @@
-// services/domainService.ts
 import api from '@/lib/api';
+import { Domain } from '@/types/domain';
 
-export interface Domain {
-    id: number;
-    label: string;
-    type: string; // 'INFRASTRUCTURE', 'MACHINERY', etc
+interface PaginatedResponse<T> {
+    data: T[];
+    meta: {
+        total: number;
+        page: number;
+        lastPage: number;
+    };
 }
 
 export const domainService = {
     getAll: async () => {
-        // Se o endpoint não existir ainda, retorna vazio pra não quebrar
-        try {
-            const response = await api.get('/domains');
-            return Array.isArray(response.data) ? response.data : [];
-        } catch (e) {
-            console.warn("Domínios não carregados");
-            return [];
+        // Tenta pegar paginado ou array direto
+        const response = await api.get<PaginatedResponse<Domain>>('/domains');
+        if (response.data && Array.isArray(response.data.data)) {
+            return response.data.data;
         }
+        if (Array.isArray(response.data)) {
+            return response.data;
+        }
+        return [];
+    },
+
+    getById: async (id: string) => {
+        const response = await api.get<Domain>(`/domains/${id}`);
+        return response.data;
+    },
+
+    create: async (data: Omit<Domain, 'id'>) => {
+        const response = await api.post('/domains', data);
+        return response.data;
+    },
+
+    update: async (id: string, data: Partial<Domain>) => {
+        const response = await api.patch(`/domains/${id}`, data);
+        return response.data;
+    },
+
+    delete: async (id: number) => {
+        await api.delete(`/domains/${id}`);
     }
 };

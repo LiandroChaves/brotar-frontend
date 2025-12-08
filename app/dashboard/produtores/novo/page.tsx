@@ -21,17 +21,17 @@ export default function NewProducerPage() {
             // --- A FAXINA FINAL (Limpando Formatação e Datas) ---
             const payload = Object.fromEntries(
                 Object.entries(data).map(([key, value]) => {
-                    // 1. Se for vazio, manda null
                     if (value === "") return [key, null];
+                    if ((key === 'cpf' || key === 'contact') && typeof value === 'string') return [key, value.replace(/\D/g, "")];
+                    if (key === 'dateBirth' && typeof value === 'string') return [key, new Date(value).toISOString()];
 
-                    // 2. CORREÇÃO DO ERRO: Se for CPF ou Contato, remove tudo que NÃO for número
-                    if ((key === 'cpf' || key === 'contact') && typeof value === 'string') {
-                        return [key, value.replace(/\D/g, "")];
-                    }
-
-                    // 3. Se for Data, converte pra ISO
-                    if (key === 'dateBirth' && typeof value === 'string') {
-                        return [key, new Date(value).toISOString()];
+                    // --- NOVO: LIMPEZA DA FAMÍLIA ---
+                    if (key === 'familyMembers' && Array.isArray(value)) {
+                        return [key, value.map((m: any) => ({
+                            ...m,
+                            age: Number(m.age),
+                            income: Number(m.income)
+                        }))];
                     }
 
                     return [key, value];

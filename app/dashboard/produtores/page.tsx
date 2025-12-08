@@ -1,23 +1,23 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { producerService } from '@/services/producerService'
-import { Producer } from '@/types/producer'
-import Link from 'next/link'
-import { toast } from 'sonner' // Mantendo o Sonner
-import { formatarCPF } from '@/lib/utils'
-import { ProducerActions } from '@/components/ProducerActions'
-import api from '@/lib/api'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Plus, Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { producerService } from "@/services/producerService"
+import type { Producer } from "@/types/producer"
+import Link from "next/link"
+import { toast } from "sonner" // Mantendo o Sonner
+import { formatarCPF } from "@/lib/utils"
+import { ProducerActions } from "@/components/ProducerActions"
+import api from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 export default function ProducersPage() {
     const [producers, setProducers] = useState<Producer[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [searchTerm, setSearchTerm] = useState('')
+    const [searchTerm, setSearchTerm] = useState("")
     const router = useRouter()
 
     // Busca os dados quando a tela carrega
@@ -43,27 +43,26 @@ export default function ProducersPage() {
             const response = await api.delete(`/producers/${id}`)
 
             if (response.status === 200 || response.status === 204) {
-                setProducers((prev) => prev.filter((p) => String(p.id) !== id));
+                setProducers((prev) => prev.filter((p) => p.id !== Number(id)))
 
-                toast.success("Produtor removido com sucesso!");
+                toast.success("Produtor removido com sucesso!")
             } else {
-                toast.error("Não foi possível excluir o produtor.");
+                toast.error("Não foi possível excluir o produtor.")
             }
         } catch (error) {
-            console.error(error);
-            toast.error("Erro de conexão ao tentar excluir.");
+            console.error(error)
+            toast.error("Erro de conexão ao tentar excluir.")
         }
-    };
+    }
 
     const handleEditProducer = (producer: any) => {
-        router.push(`/dashboard/produtores/${producer.id}`);
-    };
+        router.push(`/dashboard/produtores/${producer.id}`)
+    }
 
-    const safeProducers = Array.isArray(producers) ? producers : [];
+    const safeProducers = Array.isArray(producers) ? producers : []
 
-    const filteredProducers = safeProducers.filter(p =>
-        p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(p.cpf).includes(searchTerm)
+    const filteredProducers = safeProducers.filter(
+        (p) => p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || String(p.cpf).includes(searchTerm),
     )
 
     return (
@@ -96,9 +95,7 @@ export default function ProducersPage() {
                     {isLoading ? (
                         <div className="text-center py-4">Carregando...</div>
                     ) : filteredProducers.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                            Nenhum produtor encontrado.
-                        </div>
+                        <div className="text-center py-8 text-muted-foreground">Nenhum produtor encontrado.</div>
                     ) : (
                         <div className="rounded-md border overflow-x-auto">
                             <table className="w-full text-sm text-left min-w-[600px]">

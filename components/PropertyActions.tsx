@@ -1,16 +1,9 @@
 "use client"
 
-import { useState } from "react";
-import { Eye, Pencil, Trash2, MapPin, Tractor, Ruler, Activity } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/ui/sheet";
+import { useState } from "react"
+import { Eye, Pencil, Trash2, MapPin, Tractor, Ruler, Activity, FileDown } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -21,31 +14,59 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/ui/alert-dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
+import api from "@/lib/api"
 
 interface PropertyActionsProps {
-    property: any;
-    onEdit: (property: any) => void;
-    onDelete: (id: string) => void;
+    property: any
+    onEdit: (property: any) => void
+    onDelete: (id: string) => void
 }
 
-const InfoRow = ({ label, value }: { label: string, value: any }) => (
+const InfoRow = ({ label, value }: { label: string; value: any }) => (
     <div className="col-span-1">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</p>
         <p className="text-sm font-semibold text-foreground mt-1 truncate" title={String(value)}>
             {value || "-"}
         </p>
     </div>
-);
+)
 
 export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsProps) {
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [isExporting, setIsExporting] = useState(false)
+
+    const handleExportPDF = async () => {
+        try {
+            setIsExporting(true)
+            const response = await api.get(`/pdf/form/${property.id}`, {
+                responseType: "blob",
+            })
+
+            const blob = new Blob([response.data], { type: "application/pdf" })
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            link.href = url
+            link.download = `propriedade_${property.productiveAreaName.replace(/\s+/g, "_")}_${property.id}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+            toast.success("PDF exportado com sucesso!")
+        } catch (error) {
+            console.error("Erro ao exportar PDF:", error)
+            toast.error("Erro ao exportar PDF. Tente novamente.")
+        } finally {
+            setIsExporting(false)
+        }
+    }
 
     return (
         <div className="flex items-center justify-end gap-2">
-
             {/* --- DETALHES (SHEET) --- */}
             <Sheet>
                 <SheetTrigger asChild>
@@ -63,7 +84,6 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
 
                     <ScrollArea className="flex-1 -mx-6 px-6 my-4">
                         <div className="space-y-6 pb-6">
-
                             {/* DADOS GERAIS */}
                             <div className="space-y-3">
                                 <h4 className="text-sm font-bold text-primary">Geral</h4>
@@ -83,7 +103,9 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
 
                             {/* LOCALIZAÇÃO */}
                             <div className="space-y-3">
-                                <h4 className="text-sm font-bold text-primary flex gap-2 items-center"><MapPin className="h-4 w-4" /> Localização</h4>
+                                <h4 className="text-sm font-bold text-primary flex gap-2 items-center">
+                                    <MapPin className="h-4 w-4" /> Localização
+                                </h4>
                                 <div className="grid grid-cols-2 gap-4 border p-3 rounded-md bg-muted/20">
                                     <InfoRow label="Latitude" value={property.latitude} />
                                     <InfoRow label="Longitude" value={property.longitude} />
@@ -93,6 +115,7 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
                                                 href={`https://www.google.com/maps?q=${property.latitude},${property.longitude}`}
                                                 target="_blank"
                                                 className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1"
+                                                rel="noreferrer"
                                             >
                                                 Ver no Google Maps
                                             </a>
@@ -102,25 +125,66 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
                             </div>
 
                             <Separator />
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-bold text-primary flex items-center gap-2">
+                                    <Ruler className="h-4 w-4" /> Itens e Bens
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4 border p-3 rounded-md bg-muted/20">
+                                    {property.items && property.items.length > 0 ? (
+                                        property.items.map((item: any, index: number) => (
+                                            <div key={index} className="col-span-2 border-b pb-2 last:border-0 last:pb-0">
+                                                {/* Tenta mostrar o nome do domínio se vier populado, senão mostra o ID */}
+                                                <p className="text-sm font-semibold">{item.domain?.name || `Item (ID: ${item.idDomain})`}</p>
+                                                <div className="flex gap-4 text-xs text-muted-foreground mt-1">
+                                                    <span>Qtd: {item.quantity}</span>
+                                                    {item.complement && <span>Detalhe: {item.complement}</span>}
+                                                    <span>{item.isFunctioning ? "✅ Funciona" : "❌ Quebrado"}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground col-span-2">Nenhum item cadastrado.</p>
+                                    )}
+                                </div>
+                            </div>
+                            <Separator />
 
                             {/* INFRAESTRUTURA */}
                             <div className="space-y-3">
                                 <h4 className="text-sm font-bold text-primary">Infraestrutura</h4>
                                 <div className="border p-3 rounded-md bg-muted/20 text-sm space-y-1">
-                                    <p>⚡ Energia: <b>{property.hasElectricity ? "Sim" : "Não"}</b></p>
-                                    <p>💧 Água/Irrigação: <b>{property.hasIrrigation ? "Sim" : "Não"}</b></p>
-                                    <p>🚽 Banheiro: <b>{property.hasBathroom ? "Sim" : "Não"}</b></p>
+                                    <p>
+                                        ⚡ Energia: <b>{property.hasElectricity ? "Sim" : "Não"}</b>
+                                    </p>
+                                    <p>
+                                        💧 Água/Irrigação: <b>{property.hasIrrigation ? "Sim" : "Não"}</b>
+                                    </p>
+                                    <p>
+                                        🚽 Banheiro: <b>{property.hasBathroom ? "Sim" : "Não"}</b>
+                                    </p>
                                 </div>
                             </div>
-
                         </div>
                     </ScrollArea>
                 </SheetContent>
             </Sheet>
 
+            <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-muted text-green-600"
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                title="Exportar para PDF"
+            >
+                {isExporting ? <Activity className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            </Button>
+
             {/* --- EDITAR --- */}
             <Button
-                variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted text-orange-600"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 hover:bg-muted text-orange-600"
                 onClick={() => onEdit(property)}
             >
                 <Pencil className="h-4 w-4" />
@@ -145,9 +209,9 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
                         <AlertDialogAction
                             className="bg-red-600 hover:bg-red-700"
                             onClick={async () => {
-                                setIsDeleting(true);
-                                await onDelete(String(property.id));
-                                setIsDeleting(false);
+                                setIsDeleting(true)
+                                await onDelete(String(property.id))
+                                setIsDeleting(false)
                             }}
                         >
                             Excluir
@@ -155,7 +219,6 @@ export function PropertyActions({ property, onEdit, onDelete }: PropertyActionsP
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-
         </div>
-    );
+    )
 }

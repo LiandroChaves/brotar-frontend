@@ -12,13 +12,12 @@ import Link from "next/link"
 
 export default function EditProducerPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter()
-    const { id } = use(params) // Desembrulhando a Promise do ID
+    const { id } = use(params)
 
-    const [producer, setProducer] = useState<any>(null)
+    const [producerData, setProducerData] = useState<any>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
 
-    // 1. Carrega os dados
     useEffect(() => {
         const loadData = async () => {
             try {
@@ -31,87 +30,113 @@ export default function EditProducerPage({ params }: { params: Promise<{ id: str
                     return
                 }
 
-                // AJUSTE FINO: Se a data vier ISO do banco, corta pra YYYY-MM-DD pro input entender
                 if (data.dateBirth) {
-                    data.dateBirth = data.dateBirth.split("T")[0];
+                    data.dateBirth = data.dateBirth.split("T")[0]
                 }
 
-                setProducer(data)
+                setProducerData(data)
             } catch (error) {
                 console.error("Erro ao carregar:", error)
-                toast.error("Erro ao carregar dados do produtor.")
+                toast.error("Erro ao carregar dados.")
                 router.push("/dashboard/produtores")
             } finally {
                 setIsLoading(false)
             }
         }
 
-        if (id) {
-            loadData()
-        }
+        if (id) loadData()
     }, [id, router])
 
-    // 2. Função de submit (COM A FAXINA)
     const handleUpdate = async (data: any) => {
         try {
             setIsSaving(true)
 
-            // --- AQUI É A NOVIDADE: LIMPEZA DOS DADOS ---
-            const payload = Object.fromEntries(
-                Object.entries(data).map(([key, value]) => {
-                    // 1. Vazio vira null
-                    if (value === "") return [key, null];
+            // O backend não tem endpoints separados para FamilyMember
+            const { familyMembers, ...producerRaw } = data
 
-                    // 2. Remove pontuação de CPF e Contato
-                    if ((key === 'cpf' || key === 'contact') && typeof value === 'string') {
-                        return [key, value.replace(/\D/g, "")];
-                    }
+            const producerPayload = {
+                ...producerRaw,
+                socialName: producerRaw.socialName || null,
+                nickname: producerRaw.nickname || null,
+                cpf: producerRaw.cpf.replace(/\D/g, ""),
+                contact: producerRaw.contact.replace(/\D/g, ""),
+                dateBirth: producerRaw.dateBirth ? new Date(producerRaw.dateBirth).toISOString() : null,
+                rg: producerRaw.rg || null,
+                civilState: producerRaw.civilState || null,
+                colorRace: producerRaw.colorRace || null,
+                ethnicity: producerRaw.ethnicity || null,
+                naturalness: producerRaw.naturalness || null,
+                personalAddress: producerRaw.personalAddress || null,
+                community: producerRaw.community || null,
+                cadUnique: producerRaw.cadUnique || null,
+                nis: producerRaw.nis || null,
+                caf: producerRaw.caf || null,
+                schooling: producerRaw.schooling || null,
+                pcdDescription: producerRaw.pcdDescription || null,
+            }
 
-                    // 3. Converte data pra ISO
-                    if (key === 'dateBirth' && typeof value === 'string') {
-                        return [key, new Date(value).toISOString()];
-                    }
+            // A gestão de familyMembers será feita via endpoints separados que você criar no backend
+            await producerService.update(id, producerPayload)
 
-                    return [key, value];
-                })
-            );
+            if (familyMembers && familyMembers.length > 0) {
+                const existingIds = producerData?.familyMembers?.map((m: any) => m.id) || []
+                const currentIds = familyMembers.filter((m: any) => m.id).map((m: any) => m.id)
 
-            console.log("📦 Payload Editado Limpo:", payload)
+                // Identifica membros que foram deletados
+                const deletedIds = existingIds.filter((id: number) => !currentIds.includes(id))
 
-            await producerService.update(id, payload)
+                console.log("[v0] Membros para deletar:", deletedIds)
+                console.log("[v0] Membros atuais:", familyMembers)
 
-            toast.success("Produtor atualizado com sucesso!")
+                // TODO: Quando você criar o endpoint DELETE /family-members/:id no backend,
+                // descomentar o código abaixo:
+                /*
+                        for (const memberId of deletedIds) {
+                            await familyMemberService.delete(memberId);
+                        }
+                        
+                        for (const member of familyMembers) {
+                            const memberPayload = {
+                                idProducer: Number(id),
+                                name: member.name,
+                                kinship: member.kinship,
+                                age: member.age ? Number(member.age) : undefined,
+                                sex: member.sex || undefined,
+                                colorRace: member.colorRace || undefined,
+                                schooling: member.schooling || undefined,
+                                isPcd: !!member.isPcd,
+                                observation: member.observation || undefined
+                            };
+        
+                            if (member.id) {
+                                await familyMemberService.update(member.id, memberPayload);
+                            } else {
+                                await familyMemberService.create(memberPayload);
+                            }
+                        }
+                        */
+            }
+
+            toast.success("Produtor atualizado!")
             router.push("/dashboard/produtores")
         } catch (error: any) {
             console.error("Erro ao salvar:", error)
-
-            // Tratamento de erro detalhado
-            const serverMessage = error.response?.data?.message;
-            if (Array.isArray(serverMessage)) {
-                toast.error(`Erro: ${serverMessage[0]}`);
-            } else if (typeof serverMessage === 'string') {
-                toast.error(`Erro: ${serverMessage}`);
-            } else {
-                toast.error("Erro ao salvar alterações.");
-            }
+            const msg = error.response?.data?.message || "Erro ao salvar alterações."
+            toast.error(typeof msg === "string" ? msg : msg[0])
         } finally {
             setIsSaving(false)
         }
     }
 
     if (isLoading) {
-        return (
-            <div className="flex h-[50vh] items-center justify-center">
-                <div className="text-muted-foreground animate-pulse">Carregando dados...</div>
-            </div>
-        )
+        return <div className="flex h-[50vh] items-center justify-center animate-pulse">Carregando dados...</div>
     }
 
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4">
                 <Link href="/dashboard/produtores">
-                    <Button variant="outline" size="icon" title="Voltar">
+                    <Button variant="outline" size="icon">
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                 </Link>
@@ -120,16 +145,10 @@ export default function EditProducerPage({ params }: { params: Promise<{ id: str
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Editar Cadastro: {producer?.name}</CardTitle>
+                    <CardTitle>Editar: {producerData?.name}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {producer && (
-                        <ProducerForm
-                            initialData={producer}
-                            onSubmit={handleUpdate}
-                            isLoading={isSaving}
-                        />
-                    )}
+                    {producerData && <ProducerForm initialData={producerData} onSubmit={handleUpdate} isLoading={isSaving} />}
                 </CardContent>
             </Card>
         </div>

@@ -109,7 +109,7 @@ export function ProducerActions({ producer, onEdit, onDelete }: ProducerActionsP
                                 <div className="grid grid-cols-2 gap-4 border p-3 rounded-md bg-muted/20">
                                     <InfoRow label="Nome Completo" value={producer.name} fullWidth />
                                     {producer.socialName && <InfoRow label="Nome Social" value={producer.socialName} fullWidth />}
-                                    <InfoRow label="Apelido" value={producer.nickname} />
+                                    <InfoRow label="Apelido" value={producer?.nickname} />
                                     <InfoRow label="Data Nasc." value={formatDate(producer.dateBirth)} />
                                     <InfoRow label="CPF" value={formatarCPF(producer.cpf)} />
                                     <InfoRow label="RG" value={formatarRG(producer.rg)} />

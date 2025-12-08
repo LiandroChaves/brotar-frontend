@@ -24,5 +24,20 @@ export interface Producer {
     isRetired?: boolean;
     isPcd?: boolean;
     pcdDescription?: string;
+    familyMembers?: FamilyMember[];
     createdAt?: string;
+}
+
+// 1. Definimos o que é um membro da família
+export interface FamilyMember {
+    id?: number; // Opcional pq na criação não tem ID ainda
+    name: string;
+    kinship: string; // Parentesco (Filho, Esposa, etc)
+    age: number;
+    sex: string;
+    colorRace: string;
+    schooling: string;
+    income: number;
+    isPcd: boolean;
+    observation: string;
 }
