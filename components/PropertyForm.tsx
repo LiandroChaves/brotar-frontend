@@ -51,10 +51,12 @@ const formSchema = z.object({
     longitude: z.string(),
     timeOnProperty: z.string(),
     hasElectricity: z.boolean(),
+    electricityType: z.string(),
     hasBathroom: z.boolean(),
     hasSepticTank: z.boolean(),
     hasGreyWaterTreatment: z.boolean(),
     greyWaterTreatmentDesc: z.string(),
+    usesWaterTruck: z.boolean(),
     culturalTradition: z.string(),
     hasSchoolInCommunity: z.boolean(),
     schoolTransport: z.string(),
@@ -69,6 +71,7 @@ const formSchema = z.object({
     marketDetail: z.string(),
     hasFinancialManagement: z.boolean(),
     financialManagementDesc: z.string(),
+    incomeRange: z.string(),
     receivesTechSupport: z.boolean(),
     techSupportFrequency: z.string(),
     trainingAvailability: z.boolean(),
@@ -111,10 +114,12 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
             longitude: initialData?.longitude || "",
             timeOnProperty: initialData?.timeOnProperty || "",
             hasElectricity: !!initialData?.hasElectricity,
+            electricityType: initialData?.electricityType || "",
             hasBathroom: !!initialData?.hasBathroom,
             hasSepticTank: !!initialData?.hasSepticTank,
             hasGreyWaterTreatment: !!initialData?.hasGreyWaterTreatment,
             greyWaterTreatmentDesc: initialData?.greyWaterTreatmentDesc || "",
+            usesWaterTruck: !!initialData?.usesWaterTruck,
             culturalTradition: initialData?.culturalTradition || "",
             hasSchoolInCommunity: !!initialData?.hasSchoolInCommunity,
             schoolTransport: initialData?.schoolTransport || "",
@@ -129,6 +134,7 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
             marketDetail: initialData?.marketDetail || "",
             hasFinancialManagement: !!initialData?.hasFinancialManagement,
             financialManagementDesc: initialData?.financialManagementDesc || "",
+            incomeRange: initialData?.incomeRange || "",
             receivesTechSupport: !!initialData?.receivesTechSupport,
             techSupportFrequency: initialData?.techSupportFrequency || "",
             trainingAvailability: !!initialData?.trainingAvailability,
@@ -173,32 +179,50 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
     }, [])
 
     const handleSubmit = (data: FormValues) => {
-        const payload = {
-            ...data,
+        const formatted = {
             idProducer: Number(data.idProducer),
-            totalArea: Number(data.totalArea),
-            agriculturalArea: Number(data.agriculturalArea),
-            productiveBackyardArea: Number(data.productiveBackyardArea),
+            productiveAreaName: data.productiveAreaName || null,
+            totalArea: Number(data.totalArea) || null,
+            agriculturalArea: Number(data.agriculturalArea) || null,
+            productiveBackyardArea: Number(data.productiveBackyardArea) || null,
             backyardType: data.backyardType || null,
             latitude: data.latitude || null,
             longitude: data.longitude || null,
+            hasElectricity: data.hasElectricity,
+            electricityType: data.electricityType || null,
+            hasBathroom: data.hasBathroom,
+            hasSepticTank: data.hasSepticTank,
+            hasGreyWaterTreatment: data.hasGreyWaterTreatment,
             timeOnProperty: data.timeOnProperty || null,
             greyWaterTreatmentDesc: data.greyWaterTreatmentDesc || null,
+            usesWaterTruck: data.usesWaterTruck,
             culturalTradition: data.culturalTradition || null,
+            hasSchoolInCommunity: data.hasSchoolInCommunity,
             schoolTransport: data.schoolTransport || null,
+            visitedByHealthAgent: data.visitedByHealthAgent,
+            visitedByEndemicAgent: data.visitedByEndemicAgent,
+            hasIrrigation: data.hasIrrigation,
+            hasOrganicCertification: data.hasOrganicCertification,
             processingDistance: data.processingDistance || null,
+            accessedCredit: data.accessedCredit,
             creditDetail: data.creditDetail || null,
+            accessedMarket: data.accessedMarket,
             marketDetail: data.marketDetail || null,
+            hasFinancialManagement: data.hasFinancialManagement,
             financialManagementDesc: data.financialManagementDesc || null,
+            incomeRange: data.incomeRange || null,
+            receivesTechSupport: data.receivesTechSupport,
             techSupportFrequency: data.techSupportFrequency || null,
+            trainingAvailability: data.trainingAvailability,
             technicalReport: data.technicalReport || null,
             items: data.items.map((item) => ({
-                ...item,
                 idDomain: Number(item.idDomain),
-                quantity: Number(item.quantity),
+                complement: item.complement || null,
+                quantity: Number(item.quantity) || null,
+                isFunctioning: item.isFunctioning,
             })),
         }
-        onSubmit(payload)
+        onSubmit(formatted)
     }
 
     const handleMapSelect = (lat: string, lng: string) => {
@@ -397,63 +421,108 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
 
                     <TabsContent value="agua" className="space-y-4 py-4">
                         <Card>
-                            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <h3 className="font-medium text-sm text-muted-foreground">Infraestrutura de Água</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="hasBathroom"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                                    </FormControl>
-                                                    <FormLabel>Banheiro</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="hasSepticTank"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                                    </FormControl>
-                                                    <FormLabel>Fossa Séptica</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
+                            <CardContent className="pt-6 space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="hasElectricity"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <div className="leading-none">
+                                                    <FormLabel>Possui Energia Elétrica?</FormLabel>
+                                                </div>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="electricityType"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tipo de Eletricidade</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ex: Monofásica, Trifásica" {...field} value={field.value ?? ""} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
-                                <div className="space-y-4">
-                                    <h3 className="font-medium text-sm text-muted-foreground">Tratamento de Água</h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="hasBathroom"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <div className="leading-none">
+                                                    <FormLabel>Tem Banheiro em Casa?</FormLabel>
+                                                </div>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="hasSepticTank"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <div className="leading-none">
+                                                    <FormLabel>Tem Fossa Séptica?</FormLabel>
+                                                </div>
+                                            </FormItem>
+                                        )}
+                                    />
                                     <FormField
                                         control={form.control}
                                         name="hasGreyWaterTreatment"
                                         render={({ field }) => (
-                                            <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                                                 <FormControl>
                                                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                                                 </FormControl>
-                                                <FormLabel>Tratamento de Água Cinza</FormLabel>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="greyWaterTreatmentDesc"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Descrição do Tratamento</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="Descreva o tipo..." {...field} value={field.value ?? ""} />
-                                                </FormControl>
+                                                <div className="leading-none">
+                                                    <FormLabel>Tratamento Águas Cinzas?</FormLabel>
+                                                </div>
                                             </FormItem>
                                         )}
                                     />
                                 </div>
+
+                                <FormField
+                                    control={form.control}
+                                    name="greyWaterTreatmentDesc"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Descrição do Tratamento (Águas Cinzas)</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Ex: Filtro de areia..." {...field} value={field.value ?? ""} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="usesWaterTruck"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                            <FormControl>
+                                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <div className="leading-none">
+                                                <FormLabel>Usa Carro Pipa (Cisterna)?</FormLabel>
+                                            </div>
+                                        </FormItem>
+                                    )}
+                                />
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -512,22 +581,113 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
                     <TabsContent value="gestao" className="space-y-4 py-4">
                         <Card>
                             <CardContent className="pt-6 space-y-6">
+                                <FormField
+                                    control={form.control}
+                                    name="incomeRange"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Faixa de Renda Familiar</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione a faixa de renda" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="Até 1 SM">Até 1 SM</SelectItem>
+                                                    <SelectItem value="1 a 3 SM">1 a 3 SM</SelectItem>
+                                                    <SelectItem value="3 a 5 SM">3 a 5 SM</SelectItem>
+                                                    <SelectItem value="Acima de 5 SM">Acima de 5 SM</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="accessedCredit"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <div className="leading-none">
+                                                    <FormLabel>Acessou Crédito?</FormLabel>
+                                                </div>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="creditDetail"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Qual Crédito?</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ex: PRONAF" {...field} value={field.value ?? ""} />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="hasElectricity"
+                                        render={({ field }) => (
+                                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <FormLabel className="!mt-0">Possui Energia Elétrica</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/*  Adicionado campo Tipo de Energia Elétrica */}
+                                    <FormField
+                                        control={form.control}
+                                        name="electricityType"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Tipo de Energia Elétrica</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione..." />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="Monofásica">Monofásica</SelectItem>
+                                                        <SelectItem value="Bifásica">Bifásica</SelectItem>
+                                                        <SelectItem value="Trifásica">Trifásica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="hasBathroom"
+                                        render={({ field }) => (
+                                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                                <FormControl>
+                                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <FormLabel className="!mt-0">Possui Banheiro</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-4">
                                         <h3 className="font-medium text-sm text-muted-foreground">Energia & Social</h3>
                                         <div className="grid grid-cols-1 gap-3">
-                                            <FormField
-                                                control={form.control}
-                                                name="hasElectricity"
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                                        <FormControl>
-                                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                        <FormLabel>Energia Elétrica</FormLabel>
-                                                    </FormItem>
-                                                )}
-                                            />
                                             <FormField
                                                 control={form.control}
                                                 name="hasSchoolInCommunity"
@@ -655,47 +815,48 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
                                             control={form.control}
                                             name="hasFinancialManagement"
                                             render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                                                <FormItem className="flex items-center space-x-2 space-y-0">
                                                     <FormControl>
                                                         <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                                                     </FormControl>
-                                                    <FormLabel>Gestão Financeira</FormLabel>
+                                                    <FormLabel className="!mt-0">Gestão Financeira</FormLabel>
                                                 </FormItem>
                                             )}
                                         />
+
                                         <FormField
                                             control={form.control}
                                             name="financialManagementDesc"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Descrição</FormLabel>
+                                                    <FormLabel>Descrição da Gestão</FormLabel>
                                                     <FormControl>
-                                                        <Input placeholder="Como é feita..." {...field} value={field.value ?? ""} />
+                                                        <Input placeholder="Qual?" {...field} value={field.value ?? ""} />
                                                     </FormControl>
                                                 </FormItem>
                                             )}
                                         />
+
+                                        {/*  Adicionado campo Faixa de Renda */}
                                         <FormField
                                             control={form.control}
-                                            name="trainingAvailability"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                                    <FormControl>
-                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                                    </FormControl>
-                                                    <FormLabel>Disponibilidade para Cursos</FormLabel>
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="techSupportFrequency"
+                                            name="incomeRange"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel>Frequência de Suporte</FormLabel>
-                                                    <FormControl>
-                                                        <Input placeholder="Mensal, semanal, etc..." {...field} value={field.value ?? ""} />
-                                                    </FormControl>
+                                                    <FormLabel>Faixa de Renda Familiar</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione..." />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="Até 1 SM">Até 1 SM</SelectItem>
+                                                            <SelectItem value="1 a 3 SM">1 a 3 SM</SelectItem>
+                                                            <SelectItem value="3 a 5 SM">3 a 5 SM</SelectItem>
+                                                            <SelectItem value="Acima de 5 SM">Acima de 5 SM</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </FormItem>
                                             )}
                                         />
@@ -739,111 +900,115 @@ export function PropertyForm({ initialData, onSubmit, isLoading }: PropertyFormP
                     </TabsContent>
 
                     <TabsContent value="items" className="space-y-4 py-4">
-                        <div className="flex justify-end">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => append({ idDomain: "", quantity: 1, isFunctioning: true, complement: "" })}
-                            >
-                                <Plus className="h-4 w-4 mr-2" /> Adicionar Item
-                            </Button>
-                        </div>
-                        <div className="space-y-3">
-                            {fields.map((field, index) => (
-                                <Card key={field.id} className="relative">
+                        <Card>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-medium text-sm text-muted-foreground">Itens (Bens)</h3>
                                     <Button
                                         type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                                        onClick={() => remove(index)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2 bg-transparent"
+                                        onClick={() =>
+                                            append({
+                                                idDomain: "",
+                                                complement: "",
+                                                quantity: 1,
+                                                isFunctioning: true,
+                                            })
+                                        }
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Plus className="h-4 w-4" /> Adicionar Item
                                     </Button>
-                                    <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                                        <div className="md:col-span-4">
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.idDomain`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Item</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Selecione..." />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                {domains.map((d) => (
-                                                                    <SelectItem key={d.id} value={String(d.id)}>
-                                                                        {d.name} ({d.group})
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                        <div className="md:col-span-3">
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.complement`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Detalhe</FormLabel>
-                                                        <FormControl>
-                                                            <Input {...field} value={field.value ?? ""} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.quantity`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Qtd.</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" {...field} value={field.value} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2 flex items-center h-10">
-                                            <FormField
-                                                control={form.control}
-                                                name={`items.${index}.isFunctioning`}
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                                        <FormControl>
-                                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                        <FormLabel className="text-xs">Funcionando?</FormLabel>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            {fields.length === 0 && (
-                                <div className="text-center text-muted-foreground py-8 border border-dashed rounded-md">
-                                    Nenhum item adicionado.
                                 </div>
-                            )}
-                        </div>
+                                {fields.map((field, index) => (
+                                    <div
+                                        key={field.id}
+                                        className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end border rounded-md p-4 bg-muted/10"
+                                    >
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.idDomain`}
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-1 md:col-span-2">
+                                                    <FormLabel>Item</FormLabel>
+                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger>
+                                                                <SelectValue placeholder="Selecione o item..." />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {domains.map((d) => (
+                                                                <SelectItem key={d.id} value={String(d.id)}>
+                                                                    {d.name} ({d.group})
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.quantity`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Quantidade</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" min={1} {...field} value={field.value} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.isFunctioning`}
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-center justify-center space-x-2 space-y-0 pt-2">
+                                                    <FormControl>
+                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                    </FormControl>
+                                                    <FormLabel>Em funcionamento?</FormLabel>
+                                                </FormItem>
+                                            )}
+                                        />
+
+                                        <FormField
+                                            control={form.control}
+                                            name={`items.${index}.complement`}
+                                            render={({ field }) => (
+                                                <FormItem className="col-span-1 md:col-span-3">
+                                                    <FormLabel>Complemento/Observação</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="Ex: Cor, modelo, etc." {...field} value={field.value ?? ""} />
+                                                    </FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <div className="col-span-1 md:col-span-1 flex items-center justify-end">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="text-red-500 hover:bg-red-500 hover:text-white bg-transparent"
+                                                onClick={() => remove(index)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
 
-                <div className="flex justify-end pt-4">
-                    <Button type="submit" size="lg" disabled={isLoading}>
-                        {isLoading ? "Salvando..." : initialData ? "Atualizar" : "Cadastrar"}
+                <div className="flex justify-end gap-4">
+                    <Button type="submit" disabled={isLoading}>
+                        {isLoading ? "Salvando..." : "Salvar Propriedade"}
                     </Button>
                 </div>
             </form>

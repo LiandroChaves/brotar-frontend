@@ -57,20 +57,19 @@ const formSchema = z.object({
     pcdDescription: z.string().optional(),
 
     // --- GRUPO FAMILIAR ---
-    // IMPORTANTE: z.union([z.string(), z.number()]) permite que o campo aceite
-    // string vazia durante a digitação e número vindo do banco, sem travar o formulário.
     familyMembers: z
         .array(
             z.object({
-                id: z.number().optional(), // ID opcional para saber se é edição ou criação
-                name: z.string().min(2, "Nome obrigatório"),
-                kinship: z.string().min(1, "Parentesco obrigatório"),
-                age: z.union([z.string(), z.number()]).optional(),
-                sex: z.string().optional(),
-                colorRace: z.string().optional(),
-                schooling: z.string().optional(),
-                isPcd: z.boolean().optional(),
-                observation: z.string().optional(),
+                id: z.number().optional(),
+                name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres").max(120),
+                kinship: z.string().min(1, "Parentesco é obrigatório"),
+                age: z.number().min(0, "Idade inválida"),
+                sex: z.string().min(1, "Sexo é obrigatório"),
+                colorRace: z.string().min(1, "Cor/Raça é obrigatória"),
+                schooling: z.string().min(1, "Escolaridade é obrigatória"),
+                isPcd: z.boolean(),
+                pcdDescription: z.string(),
+                observation: z.string(),
             }),
         )
         .optional(),
@@ -80,7 +79,7 @@ type FormValues = z.infer<typeof formSchema>
 
 interface ProducerFormProps {
     initialData?: any
-    onSubmit: (data: any) => void // Mudamos para 'any' para flexibilizar a saída tratada
+    onSubmit: (data: FormValues) => void
     isLoading?: boolean
 }
 
@@ -130,12 +129,13 @@ export function ProducerForm({ initialData, onSubmit, isLoading = false }: Produ
                     id: m.id,
                     name: m.name,
                     kinship: m.kinship,
-                    age: m.age ?? "",
+                    age: Number(m.age) || 0,
                     sex: m.sex || "",
                     colorRace: m.colorRace || "",
                     schooling: m.schooling || "",
                     isPcd: !!m.isPcd,
                     observation: m.observation || "",
+                    pcdDescription: m.pcdDescription || "Nenhuma",
                 })) || [],
         },
     })
@@ -179,27 +179,27 @@ export function ProducerForm({ initialData, onSubmit, isLoading = false }: Produ
                         id: m.id,
                         name: m.name,
                         kinship: m.kinship,
-                        age: m.age ?? "",
+                        age: Number(m.age) || 0,
                         sex: m.sex || "",
                         colorRace: m.colorRace || "",
                         schooling: m.schooling || "",
                         isPcd: !!m.isPcd,
                         observation: m.observation || "",
+                        pcdDescription: m.pcdDescription || "Nenhuma",
                     })) || [],
             })
         }
     }, [initialData, form])
 
     const handleSubmit = (data: FormValues) => {
-        // PREPARAÇÃO DOS DADOS (O pulo do gato para tabelas separadas)
-        // Aqui garantimos que os números sejam números de verdade antes de subir
         const payload = {
             ...data,
             familyMembers:
                 data.familyMembers?.map((m) => ({
                     ...m,
-                    age: m.age ? Number(m.age) : null,
-                    // Mantemos o resto como está
+                    age: Number(m.age),
+                    pcdDescription: m.pcdDescription || "Nenhuma",
+                    observation: m.observation || "",
                 })) || [],
         }
         onSubmit(payload)
@@ -585,8 +585,11 @@ export function ProducerForm({ initialData, onSubmit, isLoading = false }: Produ
 
                     {/* --- ABA 2: GRUPO FAMILIAR --- */}
                     <TabsContent value="familia" className="space-y-6 pt-4">
-                        <div className="flex justify-end">
-                            {/* Botão de Adicionar sem 'income' (renda) se não houver no banco */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium">Membros da Família</h3>
+                                <p className="text-sm text-muted-foreground">Adicione os membros do grupo familiar do produtor</p>
+                            </div>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -595,144 +598,247 @@ export function ProducerForm({ initialData, onSubmit, isLoading = false }: Produ
                                     append({
                                         name: "",
                                         kinship: "",
-                                        age: "",
-                                        isPcd: false,
+                                        age: 0,
                                         sex: "",
                                         colorRace: "",
                                         schooling: "",
+                                        isPcd: false,
+                                        pcdDescription: "Nenhuma",
                                         observation: "",
                                     })
                                 }
                             >
-                                <Plus className="h-4 w-4 mr-2" /> Adicionar Membro
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Membro
                             </Button>
                         </div>
 
-                        <div className="space-y-3">
-                            {fields.map((field, index) => (
-                                <Card key={field.id} className="relative">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                                        onClick={() => remove(index)}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                    <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                                        <div className="md:col-span-4">
-                                            <FormField
-                                                control={form.control}
-                                                name={`familyMembers.${index}.name`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Nome</FormLabel>
-                                                        <FormControl>
-                                                            <Input {...field} value={field.value} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                        {fields.length === 0 ? (
+                            <Card>
+                                <CardContent className="flex flex-col items-center justify-center py-12">
+                                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                                    <p className="text-muted-foreground text-center">
+                                        Nenhum membro da família cadastrado ainda.
+                                        <br />
+                                        Clique em "Adicionar Membro" para começar.
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-4">
+                                {fields.map((field, index) => {
+                                    const isPcdMember = form.watch(`familyMembers.${index}.isPcd`)
+                                    return (
+                                        <Card key={field.id}>
+                                            <CardContent className="pt-6">
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <h4 className="text-sm font-medium">Membro {index + 1}</h4>
+                                                        <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </div>
 
-                                        <div className="md:col-span-3">
-                                            <FormField
-                                                control={form.control}
-                                                name={`familyMembers.${index}.kinship`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Parentesco</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Selecione..." />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                <SelectItem value="Conjuge">Cônjuge (Esposo/a)</SelectItem>
-                                                                <SelectItem value="Filho">Filho(a)</SelectItem>
-                                                                <SelectItem value="Neto">Neto(a)</SelectItem>
-                                                                <SelectItem value="Pai/Mae">Pai/Mãe</SelectItem>
-                                                                <SelectItem value="Irmao">Irmão/ã</SelectItem>
-                                                                <SelectItem value="Outro">Outro</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.name`}
+                                                            render={({ field }) => (
+                                                                <FormItem className="col-span-1 md:col-span-2">
+                                                                    <FormLabel>Nome Completo *</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input placeholder="Nome do familiar" {...field} />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
 
-                                        <div className="md:col-span-2">
-                                            <FormField
-                                                control={form.control}
-                                                name={`familyMembers.${index}.age`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Idade</FormLabel>
-                                                        <FormControl>
-                                                            <Input type="number" {...field} value={field.value as string} />
-                                                        </FormControl>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.kinship`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Parentesco *</FormLabel>
+                                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Selecione" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Pai">Pai</SelectItem>
+                                                                            <SelectItem value="Mae">Mãe</SelectItem>
+                                                                            <SelectItem value="Filho">Filho(a)</SelectItem>
+                                                                            <SelectItem value="Conjuge">Cônjuge</SelectItem>
+                                                                            <SelectItem value="Irmao">Irmão(ã)</SelectItem>
+                                                                            <SelectItem value="Avo">Avô(ó)</SelectItem>
+                                                                            <SelectItem value="Neto">Neto(a)</SelectItem>
+                                                                            <SelectItem value="Sobrinho">Sobrinho(a)</SelectItem>
+                                                                            <SelectItem value="Primo">Primo(a)</SelectItem>
+                                                                            <SelectItem value="Tio">Tio(a)</SelectItem>
+                                                                            <SelectItem value="Genro">Genro/Nora</SelectItem>
+                                                                            <SelectItem value="Outro">Outro</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
 
-                                        <div className="md:col-span-3">
-                                            <FormField
-                                                control={form.control}
-                                                name={`familyMembers.${index}.schooling`}
-                                                render={({ field }) => (
-                                                    <FormItem>
-                                                        <FormLabel>Escolaridade</FormLabel>
-                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                            <FormControl>
-                                                                <SelectTrigger>
-                                                                    <SelectValue placeholder="Selecione..." />
-                                                                </SelectTrigger>
-                                                            </FormControl>
-                                                            <SelectContent>
-                                                                <SelectItem value="Nao Alfabetizado">Não Alfabetizado</SelectItem>
-                                                                <SelectItem value="Fundamental">Fundamental</SelectItem>
-                                                                <SelectItem value="Medio">Médio</SelectItem>
-                                                                <SelectItem value="Superior">Superior</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.age`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Idade *</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input
+                                                                            type="number"
+                                                                            min="0"
+                                                                            max="150"
+                                                                            placeholder="0"
+                                                                            {...field}
+                                                                            value={field.value}
+                                                                            onChange={(e) => field.onChange(Number(e.target.value))}
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
 
-                                        {/* Checkbox PCD da Família */}
-                                        <div className="md:col-span-12 flex items-center gap-4">
-                                            <FormField
-                                                control={form.control}
-                                                name={`familyMembers.${index}.isPcd`}
-                                                render={({ field }) => (
-                                                    <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                                        <FormControl>
-                                                            <Checkbox checked={field.value as boolean} onCheckedChange={field.onChange} />
-                                                        </FormControl>
-                                                        <FormLabel>Possui Deficiência (PCD)?</FormLabel>
-                                                    </FormItem>
-                                                )}
-                                            />
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            {fields.length === 0 && (
-                                <div className="text-center text-muted-foreground py-8 border border-dashed rounded-md">
-                                    Nenhum membro familiar adicionado.
-                                </div>
-                            )}
-                        </div>
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.sex`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Sexo *</FormLabel>
+                                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Selecione" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Masculino">Masculino</SelectItem>
+                                                                            <SelectItem value="Feminino">Feminino</SelectItem>
+                                                                            <SelectItem value="Outro">Outro</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.colorRace`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Cor/Raça *</FormLabel>
+                                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Selecione" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Branca">Branca</SelectItem>
+                                                                            <SelectItem value="Preta">Preta</SelectItem>
+                                                                            <SelectItem value="Parda">Parda</SelectItem>
+                                                                            <SelectItem value="Amarela">Amarela</SelectItem>
+                                                                            <SelectItem value="Indigena">Indígena</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.schooling`}
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Escolaridade *</FormLabel>
+                                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                                        <FormControl>
+                                                                            <SelectTrigger>
+                                                                                <SelectValue placeholder="Selecione" />
+                                                                            </SelectTrigger>
+                                                                        </FormControl>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="Analfabeto">Analfabeto</SelectItem>
+                                                                            <SelectItem value="FundamentalIncompleto">Fundamental Incompleto</SelectItem>
+                                                                            <SelectItem value="FundamentalCompleto">Fundamental Completo</SelectItem>
+                                                                            <SelectItem value="MedioIncompleto">Médio Incompleto</SelectItem>
+                                                                            <SelectItem value="MedioCompleto">Médio Completo</SelectItem>
+                                                                            <SelectItem value="SuperiorIncompleto">Superior Incompleto</SelectItem>
+                                                                            <SelectItem value="SuperiorCompleto">Superior Completo</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
+                                                        />
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.isPcd`}
+                                                            render={({ field }) => (
+                                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                                                    <FormControl>
+                                                                        <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                                                    </FormControl>
+                                                                    <div className="space-y-1 leading-none">
+                                                                        <FormLabel>Pessoa com Deficiência (PCD)</FormLabel>
+                                                                    </div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+
+                                                        {isPcdMember && (
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`familyMembers.${index}.pcdDescription`}
+                                                                render={({ field }) => (
+                                                                    <FormItem className="col-span-1 md:col-span-2">
+                                                                        <FormLabel>Descrição da Deficiência</FormLabel>
+                                                                        <FormControl>
+                                                                            <Input placeholder="Descreva a deficiência" {...field} />
+                                                                        </FormControl>
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        )}
+
+                                                        <FormField
+                                                            control={form.control}
+                                                            name={`familyMembers.${index}.observation`}
+                                                            render={({ field }) => (
+                                                                <FormItem className="col-span-1 md:col-span-3">
+                                                                    <FormLabel>Observações</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input placeholder="Informações adicionais" {...field} />
+                                                                    </FormControl>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
 
-                <div className="pt-4 pb-10 flex justify-end">
-                    <Button type="submit" disabled={isLoading} className="w-full sm:w-auto min-w-[200px]">
-                        {isLoading ? "Salvando..." : initialData ? "Salvar Alterações" : "Cadastrar Produtor"}
+                <div className="flex justify-end gap-4">
+                    <Button type="submit" disabled={isLoading}>
+                        {isLoading ? "Salvando..." : "Salvar Produtor"}
                     </Button>
                 </div>
             </form>

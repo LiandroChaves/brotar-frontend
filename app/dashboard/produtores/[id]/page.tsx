@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react"
 import { useRouter } from "next/navigation"
 import { ProducerForm } from "@/components/ProducerForm"
 import { producerService } from "@/services/producerService"
+import { familyMemberService } from "@/services/familyMemberService"
 import { toast } from "sonner"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,19 +23,24 @@ export default function EditProducerPage({ params }: { params: Promise<{ id: str
         const loadData = async () => {
             try {
                 setIsLoading(true)
-                const data = await producerService.getById(id)
+                const [producer, familyMembers] = await Promise.all([
+                    producerService.getById(id),
+                    familyMemberService.getByProducer(Number(id)),
+                ])
 
-                if (!data) {
+                if (!producer) {
                     toast.error("Produtor não encontrado.")
                     router.push("/dashboard/produtores")
                     return
                 }
 
-                if (data.dateBirth) {
-                    data.dateBirth = data.dateBirth.split("T")[0]
+                if (producer.dateBirth) {
+                    producer.dateBirth = producer.dateBirth.split("T")[0]
                 }
 
-                setProducerData(data)
+                producer.familyMembers = familyMembers
+
+                setProducerData(producer)
             } catch (error) {
                 console.error("Erro ao carregar:", error)
                 toast.error("Erro ao carregar dados.")
@@ -51,7 +57,6 @@ export default function EditProducerPage({ params }: { params: Promise<{ id: str
         try {
             setIsSaving(true)
 
-            // O backend não tem endpoints separados para FamilyMember
             const { familyMembers, ...producerRaw } = data
 
             const producerPayload = {
@@ -75,46 +80,43 @@ export default function EditProducerPage({ params }: { params: Promise<{ id: str
                 pcdDescription: producerRaw.pcdDescription || null,
             }
 
-            // A gestão de familyMembers será feita via endpoints separados que você criar no backend
             await producerService.update(id, producerPayload)
 
             if (familyMembers && familyMembers.length > 0) {
                 const existingIds = producerData?.familyMembers?.map((m: any) => m.id) || []
                 const currentIds = familyMembers.filter((m: any) => m.id).map((m: any) => m.id)
 
-                // Identifica membros que foram deletados
                 const deletedIds = existingIds.filter((id: number) => !currentIds.includes(id))
 
-                console.log("[v0] Membros para deletar:", deletedIds)
-                console.log("[v0] Membros atuais:", familyMembers)
+                for (const memberId of deletedIds) {
+                    await familyMemberService.delete(memberId)
+                }
 
-                // TODO: Quando você criar o endpoint DELETE /family-members/:id no backend,
-                // descomentar o código abaixo:
-                /*
-                        for (const memberId of deletedIds) {
-                            await familyMemberService.delete(memberId);
-                        }
-                        
-                        for (const member of familyMembers) {
-                            const memberPayload = {
-                                idProducer: Number(id),
-                                name: member.name,
-                                kinship: member.kinship,
-                                age: member.age ? Number(member.age) : undefined,
-                                sex: member.sex || undefined,
-                                colorRace: member.colorRace || undefined,
-                                schooling: member.schooling || undefined,
-                                isPcd: !!member.isPcd,
-                                observation: member.observation || undefined
-                            };
-        
-                            if (member.id) {
-                                await familyMemberService.update(member.id, memberPayload);
-                            } else {
-                                await familyMemberService.create(memberPayload);
-                            }
-                        }
-                        */
+                for (const member of familyMembers) {
+                    const memberPayload = {
+                        idProducer: Number(id),
+                        name: member.name,
+                        kinship: member.kinship,
+                        age: member.age ? Number(member.age) : undefined,
+                        sex: member.sex || undefined,
+                        colorRace: member.colorRace || undefined,
+                        schooling: member.schooling || undefined,
+                        isPcd: !!member.isPcd,
+                        pcdDescription: member.pcdDescription || "Nenhuma",
+                        observation: member.observation || "",
+                    }
+
+                    if (member.id) {
+                        await familyMemberService.update(member.id, memberPayload)
+                    } else {
+                        await familyMemberService.create(memberPayload)
+                    }
+                }
+            } else {
+                const existingIds = producerData?.familyMembers?.map((m: any) => m.id) || []
+                for (const memberId of existingIds) {
+                    await familyMemberService.delete(memberId)
+                }
             }
 
             toast.success("Produtor atualizado!")
